@@ -1,8 +1,6 @@
 # Automatic CPR Portable
 
-Firmware for **Rancang Bangun Automatic CPR Portable Dilengkapi dengan Sensor Denyut Jantung** — Arduino Uno prototype with MAX30102 heart-rate monitoring, I2C LCD, TB6600 stepper belt compression, push buttons, and active buzzer.
-
-Algorithm follows thesis flowchart **Gambar 3.3**.
+Firmware for **Automatic CPR Portable Dilengkapi dengan Sensor Denyut Jantung** — Arduino Uno prototype with MAX30102 heart-rate monitoring, I2C LCD, TB6600 stepper belt compression, push buttons, and active buzzer.
 
 ## Project structure
 
