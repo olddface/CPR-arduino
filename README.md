@@ -149,12 +149,4 @@ From [`platformio.ini`](platformio.ini):
 - Belt depth (5–6 cm target) is set mechanically via `STEPS_PER_STROKE` and mechanical linkage, not in software.
 - If motor does not move, verify TB6600 jumper (5V vs GND) and set `TB6600_COMMON_5V` accordingly.
 
-## Git
-
-```bash
-git init          # already done if you cloned this repo
-git add .
-git status
-```
-
 `.pio/` build cache and local VS Code generated files are gitignored. Run `pio run` after clone to restore dependencies.
