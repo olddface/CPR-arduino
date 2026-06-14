@@ -30,7 +30,7 @@ void displayInit() {
 
 void showIdleDisplay() {
   lcd.setCursor(0, 0);
-  lcd.print(F("ALAT CPR OTOMAT"));
+  lcd.print(F("ALAT CPR OTMTS"));
   printBpmLine2();
 }
 

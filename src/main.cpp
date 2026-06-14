@@ -16,7 +16,7 @@
       DIR-  → D8
       DIR+ and PUL- jumpered together → Arduino 5V
       (if that jumper goes to GND instead, set TB6600_COMMON_5V to false)
-      ENA+/ENA- leave unconnected = driver enabled
+      ENA+ → 5V, ENA- → D10 (disabled until a compression stroke runs)
       Motor: A+/A- and B+/B- to stepper coils
       Power: VCC/GND on driver = 9–42 V DC (motor PSU, NOT Arduino 5V)
       Set TB6600 microsteps to match STEPS_PER_REV below

@@ -3,7 +3,20 @@
 #include "buttons.h"
 #include "config.h"
 
+namespace {
+
+constexpr uint8_t kEnableActiveLevel = TB6600_ENABLE_5V ? LOW : HIGH;
+constexpr uint8_t kEnableInactiveLevel = TB6600_ENABLE_5V ? HIGH : LOW;
+
+void stepperSetEnabled(bool enabled) {
+  digitalWrite(ENABLE_PIN, enabled ? kEnableActiveLevel : kEnableInactiveLevel);
+}
+
+}  // namespace
+
 void stepperInit() {
+  pinMode(ENABLE_PIN, OUTPUT);
+  stepperSetEnabled(false);
   pinMode(STEP_PIN, OUTPUT);
   pinMode(DIR_PIN, OUTPUT);
   digitalWrite(STEP_PIN, TB6600_COMMON_5V ? HIGH : LOW);
@@ -18,6 +31,8 @@ unsigned long compressionStepDelayUs() {
 }
 
 bool stepMotorTimed(uint16_t steps, bool directionUp, unsigned long delayUs) {
+  stepperSetEnabled(true);
+
   if (TB6600_COMMON_5V) {
     digitalWrite(DIR_PIN, directionUp ? LOW : HIGH);
     digitalWrite(STEP_PIN, HIGH);
@@ -28,6 +43,7 @@ bool stepMotorTimed(uint16_t steps, bool directionUp, unsigned long delayUs) {
 
   for (uint16_t i = 0; i < steps; i++) {
     if (isStopPressed()) {
+      stepperSetEnabled(false);
       return false;
     }
 
@@ -46,5 +62,6 @@ bool stepMotorTimed(uint16_t steps, bool directionUp, unsigned long delayUs) {
     }
   }
 
+  stepperSetEnabled(false);
   return true;
 }
