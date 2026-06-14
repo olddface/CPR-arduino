@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 
+// display.cpp — I2C LCD text for each CPR screen
 void displayInit();
 void showIdleDisplay();
 void showAliveDisplay();

@@ -31,7 +31,7 @@ test-max30102/
 | `pulse_sensor` | MAX30102 setup, beat detection, rolling BPM average |
 | `stepper_motor` | TB6600 enable/step/dir control; ENA on only during compression strokes |
 | `display` | LCD screens for each state |
-| `buttons` | Debounced reads for Start / Gemuk / Stop / Kurus |
+| `buttons` | Momentary Start/Stop + toggle Gemuk/Kurus reads |
 | `buzzer` | Active buzzer on/off and multi-beep patterns |
 
 ## Hardware
@@ -63,16 +63,16 @@ If the shaft stays stiff at idle, toggle `TB6600_ENABLE_5V` in `config.h`. If st
 
 If your board uses PUL+/DIR+ to 5V instead (PUL−/DIR− on GPIO), set `TB6600_COMMON_5V` to `true` and re-check ENA polarity.
 
-### Buttons (INPUT_PULLUP — pressed = LOW)
+### Buttons (INPUT_PULLUP — contact to GND = ON)
 
-| Pin | Function |
-|-----|----------|
-| D2 | **Start** — begin pulse check |
-| D4 | **Gemuk** — 30 compressions per cycle |
-| D7 | **Stop** — abort CPR |
-| D12 | **Kurus** — 15 compressions per cycle |
+| Pin | Type | Function |
+|-----|------|----------|
+| D2 | **Momentary** | **Start** — press once to begin pulse check |
+| D7 | **Momentary** | **Stop** — press once to abort (also checked while motor runs) |
+| D4 | **Toggle** | **Gemuk** — flip ON to run 30-compression mode |
+| D12 | **Toggle** | **Kurus** — flip ON to run 15-compression mode |
 
-One side of each button → Arduino pin, other side → GND.
+Start and Stop are push buttons: firmware reacts on **press**, not while held (except Stop aborts mid-stroke via `isStopPressed()` inside the motor loop). Gemuk/Kurus are toggle switches: firmware reads whether the switch is **ON**.
 
 ## System flow
 
@@ -148,7 +148,7 @@ State values: `0` Idle, `1` PulseCheck, `2` AwaitingMode, `3` RunningGemuk, `4` 
 
 1. **Idle** — LCD shows title and BPM when finger is on MAX30102.
 2. **Alive path** — Finger on sensor → press **Start** → `Pasien Masih Hidup`, motor does not run.
-3. **Arrest path** — No finger → **Start** → `Pasien Henti Jantung` → press **Gemuk** or **Kurus**.
+3. **Arrest path** — No finger → **Start** → `Pasien Henti Jantung` → flip **Gemuk** or **Kurus** toggle ON.
 4. **Compression** — Motor runs tighten/release strokes; LCD counts `Komp: n/total`.
 5. **Ventilation cue** — After each batch, buzzer beeps twice.
 6. **Stop** — Press **Stop** anytime → motor halts, short buzzer chirp, returns to idle after 2 s.

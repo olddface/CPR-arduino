@@ -5,21 +5,23 @@
 #include "config.h"
 #include "pulse_sensor.h"
 
+// Object instance: ClassName objectName(args) — creates LCD driver at I2C addr 0x27, 16 cols, 2 rows
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 void printBpmLine2() {
   const long irValue = pulseSensorIrValue();
   const int beatAvg = pulseSensorBeatAvg();
-  const float beatsPerMinute = pulseSensorBpm();
+  const float beatsPerMinute = pulseSensorBpm();  // float = decimal number
 
-  lcd.setCursor(0, 1);
+  lcd.setCursor(0, 1);  // column 0, row 1 (second line)
   lcd.print(F("BPM: "));
   if (irValue < FINGER_IR_MIN) {
-    lcd.print(F("--"));
+    lcd.print(F("--"));  // no finger on sensor
   } else {
-    lcd.print(beatAvg > 0 ? beatAvg : (int)beatsPerMinute);
+    // Prefer rolling average; fallback to instant BPM if avg not ready yet
+    lcd.print(beatAvg > 0 ? beatAvg : (int)beatsPerMinute);  // (int) = C-style cast to integer
   }
-  lcd.print(F("        "));
+  lcd.print(F("        "));  // trailing spaces erase old digits
 }
 
 void displayInit() {
@@ -47,12 +49,13 @@ void showArrestDisplay() {
   lcd.print(F("Gemuk / Kurus   "));
 }
 
+// __FlashStringHelper* = pointer to flash-stored string (from F("...") in caller)
 void showCprDisplay(const __FlashStringHelper *modeLabel, uint8_t current, uint8_t total) {
   lcd.setCursor(0, 0);
   lcd.print(modeLabel);
   lcd.setCursor(0, 1);
   lcd.print(F("Komp: "));
-  lcd.print(current);
+  lcd.print(current);  // lcd.print overload accepts int/uint8_t
   lcd.print(F("/"));
   lcd.print(total);
   lcd.print(F("   "));
