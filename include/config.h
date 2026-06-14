@@ -21,9 +21,9 @@ constexpr uint8_t BUZZER_PIN = 13;
 constexpr uint8_t STEP_PIN = 9;
 constexpr uint8_t DIR_PIN = 8;
 constexpr uint8_t ENABLE_PIN = 10;
-constexpr bool TB6600_COMMON_5V = true;
-// ENA wiring must match DIR/PUL opto style. Toggle if idle shaft stays stiff (driver still on).
-// ENA- → D10, ENA+ → 5V Disabled by default
+constexpr bool TB6600_COMMON_5V = false;
+// PUL-/DIR-/ENA- → GND; PUL+ → D9, DIR+ → D8, ENA+ → D10. Off at idle; on during strokes.
+// Toggle if idle shaft stays stiff (driver still enabled when it should not be).
 constexpr bool TB6600_ENABLE_5V = false;
 
 // --- CPR parameters ---

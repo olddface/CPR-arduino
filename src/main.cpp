@@ -11,15 +11,15 @@
       D7  = Stop
       D12 = Kurus mode
     Buzzer (active): D13 → buzzer+, GND → buzzer-
-    TB6600:
-      PUL+  → D9
-      DIR-  → D8
-      DIR+ and PUL- jumpered together → Arduino 5V
-      (if that jumper goes to GND instead, set TB6600_COMMON_5V to false)
-      ENA+ → 5V, ENA- → D10 (disabled until a compression stroke runs)
+    TB6600 (optocoupler inputs, common GND):
+      PUL+  → D9,  DIR+  → D8,  ENA+  → D10
+      PUL-, DIR-, and ENA- jumpered together → Arduino GND
+      (if PUL-/DIR- go to GPIO and PUL+/DIR+ to 5V instead, set TB6600_COMMON_5V to true)
+      ENA off at idle; enabled only during stepMotorTimed() strokes
+      (toggle TB6600_ENABLE_5V if idle shaft stays stiff)
       Motor: A+/A- and B+/B- to stepper coils
-      Power: VCC/GND on driver = 9–42 V DC (motor PSU, NOT Arduino 5V)
-      Set TB6600 microsteps to match STEPS_PER_REV below
+      Driver GND → Arduino GND; motor PSU 9–42 V on VCC/GND (NOT Arduino 5V)
+      Set TB6600 microsteps to match STEPS_PER_REV in config.h
 */
 
 #include <Arduino.h>

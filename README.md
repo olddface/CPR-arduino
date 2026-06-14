@@ -29,7 +29,7 @@ test-max30102/
 |--------|----------------|
 | `cpr_engine` | System state machine and compression batch orchestration |
 | `pulse_sensor` | MAX30102 setup, beat detection, rolling BPM average |
-| `stepper_motor` | TB6600 direction/step timing at target compression rate |
+| `stepper_motor` | TB6600 enable/step/dir control; ENA on only during compression strokes |
 | `display` | LCD screens for each state |
 | `buttons` | Debounced reads for Start / Gemuk / Stop / Kurus |
 | `buzzer` | Active buzzer on/off and multi-beep patterns |
@@ -42,10 +42,26 @@ test-max30102/
 | MAX30102 | 5V, GND, SDA → A4, SCL → A5 |
 | LCD 16×2 I2C | Same I2C bus, address `0x27` (try `0x3F` if blank) |
 | Active buzzer | D13 → buzzer+, GND → buzzer− |
-| TB6600 driver | PUL+ → D9, DIR− → D8 |
-| TB6600 common | DIR+ and PUL− jumpered to Arduino 5V |
+| TB6600 PUL | PUL+ → D9 (`STEP_PIN`), PUL− → GND (with DIR−) |
+| TB6600 DIR | DIR+ → D8 (`DIR_PIN`), DIR− → GND (with PUL−) |
+| TB6600 ENA | ENA+ → D10 (`ENABLE_PIN`), ENA− → GND |
+| TB6600 common | PUL−, DIR−, and ENA− to Arduino GND; driver GND tied to Arduino GND |
 | Stepper NEMA 23 | A+/A−, B+/B− to driver |
 | Motor PSU | 9–42 V DC to driver VCC/GND (**not** Arduino 5V) |
+
+### TB6600 enable (ENA)
+
+The driver is **disabled at boot and idle** so the motor coils are not energized between compressions. `stepMotorTimed()` turns ENA **on** at the start of each stroke and **off** when the stroke finishes (or when **Stop** is pressed mid-stroke).
+
+| Situation | Expected |
+|-----------|----------|
+| Idle (Arduino running, motor PSU on) | Shaft spins easily by hand; little or no chopper hum |
+| During compression stroke | Shaft resists; driver hums while stepping |
+| Motor PSU only (Arduino off) | Driver may stay enabled — **not** a valid ENA test |
+
+If the shaft stays stiff at idle, toggle `TB6600_ENABLE_5V` in `config.h`. If still stiff, check ENA+ on D10, ENA− on GND, and common GND to the driver.
+
+If your board uses PUL+/DIR+ to 5V instead (PUL−/DIR− on GPIO), set `TB6600_COMMON_5V` to `true` and re-check ENA polarity.
 
 ### Buttons (INPUT_PULLUP — pressed = LOW)
 
@@ -101,7 +117,9 @@ Edit constants in [`include/config.h`](include/config.h):
 | `STEPS_PER_REV` | 200 | Must match TB6600 DIP switch microstep setting |
 | `FINGER_IR_MIN` | 70000 | IR threshold for finger / pulse detection |
 | `PULSE_BPM_MIN` | 20 | Minimum BPM to count as detectable pulse |
-| `TB6600_COMMON_5V` | `true` | Set `false` if DIR+/PUL− jumper goes to GND |
+| `ENABLE_PIN` | `10` | TB6600 ENA+ (Arduino GPIO) |
+| `TB6600_COMMON_5V` | `false` | Set `true` if PUL+/DIR+ go to 5V and PUL−/DIR− go to GPIO |
+| `TB6600_ENABLE_5V` | `false` | ENA opto polarity — toggle if idle shaft stays stiff (driver still on) |
 
 ## Build and upload
 
@@ -147,6 +165,8 @@ From [`platformio.ini`](platformio.ini):
 - CPR is **button-driven**, not auto-triggered by low BPM.
 - Buzzer cues ventilation only; there is no bag-valve hardware.
 - Belt depth (5–6 cm target) is set mechanically via `STEPS_PER_STROKE` and mechanical linkage, not in software.
-- If motor does not move, verify TB6600 jumper (5V vs GND) and set `TB6600_COMMON_5V` accordingly.
+- If motor does not move, verify TB6600 opto wiring (GND common vs 5V common) and set `TB6600_COMMON_5V` accordingly.
+- Connect ENA+ to D10 and ENA− to GND for software enable control. Leaving ENA unconnected keeps the driver always enabled.
+- Motor PSU alone can produce chopper hum even when idle; verify ENA with **both** PSUs on and Arduino at idle (shaft should turn freely).
 
 `.pio/` build cache and local VS Code generated files are gitignored. Run `pio run` after clone to restore dependencies.
