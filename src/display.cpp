@@ -50,14 +50,16 @@ void showArrestDisplay() {
 }
 
 // __FlashStringHelper* = pointer to flash-stored string (from F("...") in caller)
-void showCprDisplay(const __FlashStringHelper *modeLabel, uint8_t current, uint8_t total) {
+void showCprDisplay(const __FlashStringHelper *modeLabel, uint8_t current, uint8_t total, uint8_t cycle) {
   lcd.setCursor(0, 0);
   lcd.print(modeLabel);
   lcd.setCursor(0, 1);
-  lcd.print(F("Komp: "));
-  lcd.print(current);  // lcd.print overload accepts int/uint8_t
+  lcd.print(F("Komp:"));
+  lcd.print(current);
   lcd.print(F("/"));
   lcd.print(total);
+  lcd.print(F(" C:"));
+  lcd.print(cycle);
   lcd.print(F("   "));
 }
 
@@ -79,6 +81,12 @@ void showSensorNotFoundDisplay() {
   lcd.print(F("Sensor not found"));
   lcd.setCursor(0, 1);
   lcd.print(F("                "));
+}
+
+void showPulsePauseDisplay() {
+  lcd.setCursor(0, 0);
+  lcd.print(F("Denyut terdeteksi"));
+  printBpmLine2();
 }
 
 void showBeltTightenDisplay(bool gemuk, float weightKg) {

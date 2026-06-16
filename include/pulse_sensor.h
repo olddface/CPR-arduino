@@ -7,6 +7,7 @@ bool pulseSensorInit();
 void pulseSensorUpdate();
 void pulseSensorReset();
 bool hasDetectablePulse();
+bool isPulseBelowCprThreshold();
 
 long pulseSensorIrValue();
 int pulseSensorBeatAvg();

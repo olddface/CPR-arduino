@@ -3,6 +3,7 @@
 #include "buttons.h"
 #include "config.h"
 #include "display.h"
+#include "pulse_sensor.h"
 
 // namespace { } = file-private scope; names inside are not visible to other .cpp files
 namespace {
@@ -62,6 +63,14 @@ bool stepMotorTimed(uint16_t steps, bool directionUp, unsigned long delayUs) {
     if ((i % kWeightCheckIntervalSteps) == 0 && !loadCellAllowsMotor()) {
       stepperSetEnabled(false);
       return false;
+    }
+
+    if ((i % kWeightCheckIntervalSteps) == 0) {
+      pulseSensorUpdate();
+      if (hasDetectablePulse()) {
+        stepperSetEnabled(false);
+        return false;
+      }
     }
 
     if (TB6600_COMMON_5V) {

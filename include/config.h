@@ -10,6 +10,7 @@
 constexpr uint32_t UI_UPDATE_MS = 500;
 constexpr uint32_t PULSE_CHECK_MS = 2500;
 constexpr uint32_t STOP_DISPLAY_MS = 2000;
+constexpr uint32_t PULSE_PAUSE_WAIT_MS = 12000;  // min wait before CPR can resume after pulse detected
 constexpr uint32_t BTN_DEBOUNCE_MS = 40;
 constexpr uint32_t BEEP_ON_MS = 200;
 constexpr uint32_t BEEP_OFF_MS = 150;
@@ -70,4 +71,5 @@ enum class SystemState : uint8_t {
   BeltTighten,
   RunningGemuk,
   RunningKurus,
+  PulsePause,
 };

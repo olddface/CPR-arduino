@@ -66,6 +66,10 @@ bool hasDetectablePulse() {
   return irValue >= FINGER_IR_MIN && beatAvg >= PULSE_BPM_MIN;
 }
 
+bool isPulseBelowCprThreshold() {
+  return irValue >= FINGER_IR_MIN && beatAvg < PULSE_BPM_MIN;
+}
+
 long pulseSensorIrValue() {
   return irValue;
 }

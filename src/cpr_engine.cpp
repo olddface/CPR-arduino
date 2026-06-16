@@ -15,7 +15,32 @@ SystemState systemState = SystemState::Idle;
 uint32_t pulseCheckStartMs = 0;
 uint32_t stoppedDisplayUntilMs = 0;
 uint32_t lastUiUpdateMs = 0;
+uint32_t pulsePauseStartMs = 0;
 bool beltTightenGemuk = false;
+SystemState pausedFromState = SystemState::RunningGemuk;
+uint8_t cprCycleCount = 1;
+
+enum class BatchResult : uint8_t { Complete, StoppedByUser, StoppedByPulse };
+
+void enterPulsePause(SystemState fromState, uint32_t now) {
+  pausedFromState = fromState;
+  pulsePauseStartMs = now;
+  pulseSensorReset();
+  buzzerBeep(1, 400, 0);
+  showPulsePauseDisplay();
+  Serial.print(F("Pulse detected (BPM>="));
+  Serial.print(PULSE_BPM_MIN);
+  Serial.println(F(") — CPR paused"));
+  systemState = SystemState::PulsePause;
+}
+
+void handleRunningComplete() {
+  const ButtonEvent btn = pollButtons();
+  if (btn == ButtonEvent::Stop) {
+    handleStop();
+    systemState = SystemState::Idle;
+  }
+}
 
 void handleStop() {
   buzzerBeep(1, 400, 0);  // one short beep: 400 ms on, 0 ms off between
@@ -25,27 +50,29 @@ void handleStop() {
 }
 
 // bool return: true = batch finished, false = user hit Stop mid-batch
-bool runCompressionBatch(uint8_t count, uint8_t total) {
+BatchResult runCompressionBatch(uint8_t count, uint8_t total) {
   const unsigned long stepDelayUs = compressionStepDelayUs();
 
   for (uint8_t i = 0; i < count; i++) {
     // Nested ternary picks LCD title based on current enum state
     showCprDisplay(
         systemState == SystemState::RunningGemuk ? F("Mode Gemuk     ") : F("Mode Kurus     "),
-        i + 1, total);  // i+1 because humans count from 1, loop i starts at 0
+        i + 1, total, cprCycleCount);  // i+1 because humans count from 1, loop i starts at 0
 
-    // !stepMotorTimed(...) = "if stepMotorTimed returned false"
     if (!stepMotorTimed(STEPS_PER_STROKE, true, stepDelayUs)) {
-      return false;
+      return hasDetectablePulse() ? BatchResult::StoppedByPulse : BatchResult::StoppedByUser;
     }
     if (!stepMotorTimed(STEPS_PER_STROKE, false, stepDelayUs)) {
-      return false;
+      return hasDetectablePulse() ? BatchResult::StoppedByPulse : BatchResult::StoppedByUser;
     }
 
     pulseSensorUpdate();
+    if (hasDetectablePulse()) {
+      return BatchResult::StoppedByPulse;
+    }
   }
 
-  return true;
+  return BatchResult::Complete;
 }
 
 void cprEngineInit() {
@@ -53,6 +80,9 @@ void cprEngineInit() {
   pulseCheckStartMs = 0;
   stoppedDisplayUntilMs = 0;
   lastUiUpdateMs = 0;
+  pulsePauseStartMs = 0;
+  pausedFromState = SystemState::RunningGemuk;
+  cprCycleCount = 1;
 }
 
 SystemState cprEngineState() {
@@ -147,33 +177,57 @@ void cprEngineUpdate() {
       }
       break;
 
-    case SystemState::RunningGemuk:
-      if (!runCompressionBatch(GEMUK_COMPRESSIONS, GEMUK_COMPRESSIONS)) {
+    case SystemState::RunningGemuk: {
+      const BatchResult batch = runCompressionBatch(GEMUK_COMPRESSIONS, GEMUK_COMPRESSIONS);
+      if (batch == BatchResult::StoppedByPulse) {
+        enterPulsePause(SystemState::RunningGemuk, now);
+        break;
+      }
+      if (batch == BatchResult::StoppedByUser) {
         handleStop();
         systemState = SystemState::Idle;
         break;
       }
 
       buzzerBeep(VENTILATION_BEEPS);
-
-      if (btn == ButtonEvent::Stop) {
-        handleStop();
-        systemState = SystemState::Idle;
-      }
+      cprCycleCount++;
+      handleRunningComplete();
       break;
+    }
 
-    case SystemState::RunningKurus:
-      if (!runCompressionBatch(KURUS_COMPRESSIONS, KURUS_COMPRESSIONS)) {
+    case SystemState::RunningKurus: {
+      const BatchResult batch = runCompressionBatch(KURUS_COMPRESSIONS, KURUS_COMPRESSIONS);
+      if (batch == BatchResult::StoppedByPulse) {
+        enterPulsePause(SystemState::RunningKurus, now);
+        break;
+      }
+      if (batch == BatchResult::StoppedByUser) {
         handleStop();
         systemState = SystemState::Idle;
         break;
       }
 
       buzzerBeep(VENTILATION_BEEPS);
+      cprCycleCount++;
+      handleRunningComplete();
+      break;
+    }
 
+    case SystemState::PulsePause:
       if (btn == ButtonEvent::Stop) {
         handleStop();
         systemState = SystemState::Idle;
+        break;
+      }
+
+      if (now - lastUiUpdateMs >= UI_UPDATE_MS) {
+        lastUiUpdateMs = now;
+        showPulsePauseDisplay();
+      }
+
+      if (now - pulsePauseStartMs >= PULSE_PAUSE_WAIT_MS && isPulseBelowCprThreshold()) {
+        Serial.println(F("Pulse below threshold — resuming CPR from komp 0"));
+        systemState = pausedFromState;
       }
       break;
   }
