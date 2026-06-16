@@ -53,7 +53,7 @@ constexpr unsigned long BELT_TIGHTEN_STEP_DELAY_US = 2000;
 // --- Pulse detection ---
 // long = signed 32-bit integer (large IR sensor readings)
 constexpr long FINGER_IR_MIN = 70000;
-constexpr int PULSE_BPM_MIN = 20;
+constexpr int PULSE_BPM_MIN = 60;
 
 // enum class = typed list of named constants (safer than plain #define)
 // : uint8_t stores each value in one byte
