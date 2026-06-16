@@ -2,6 +2,7 @@
 
 #include "buttons.h"
 #include "config.h"
+#include "display.h"
 
 // namespace { } = file-private scope; names inside are not visible to other .cpp files
 namespace {
@@ -61,6 +62,51 @@ bool stepMotorTimed(uint16_t steps, bool directionUp, unsigned long delayUs) {
     if ((i % kWeightCheckIntervalSteps) == 0 && !loadCellAllowsMotor()) {
       stepperSetEnabled(false);
       return false;
+    }
+
+    if (TB6600_COMMON_5V) {
+      digitalWrite(STEP_PIN, LOW);
+      delayMicroseconds(5);
+      digitalWrite(STEP_PIN, HIGH);
+    } else {
+      digitalWrite(STEP_PIN, HIGH);
+      delayMicroseconds(5);
+      digitalWrite(STEP_PIN, LOW);
+    }
+
+    if (delayUs > 5) {
+      delayMicroseconds(delayUs - 5);
+    }
+  }
+
+  stepperSetEnabled(false);
+  return true;
+}
+
+// Run motor in tighten direction until load cell hits threshold, or Stop is pressed.
+bool stepMotorUntilWeight(bool directionUp, unsigned long delayUs, bool gemukMode) {
+  stepperSetEnabled(true);
+
+  if (TB6600_COMMON_5V) {
+    digitalWrite(DIR_PIN, directionUp ? LOW : HIGH);
+    digitalWrite(STEP_PIN, HIGH);
+  } else {
+    digitalWrite(DIR_PIN, directionUp ? HIGH : LOW);
+    digitalWrite(STEP_PIN, LOW);
+  }
+
+  uint32_t lastUiUpdateMs = 0;
+
+  while (!loadCellMeetsThreshold()) {
+    if (isStopPressed()) {
+      stepperSetEnabled(false);
+      return false;
+    }
+
+    const uint32_t now = millis();
+    if (now - lastUiUpdateMs >= UI_UPDATE_MS) {
+      lastUiUpdateMs = now;
+      showBeltTightenDisplay(gemukMode, loadCellWeightKg());
     }
 
     if (TB6600_COMMON_5V) {

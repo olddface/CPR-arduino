@@ -48,6 +48,7 @@ constexpr uint8_t HX711_SCK_PIN = 6;
 constexpr float LOAD_CELL_SCALE = -7050.0f;
 constexpr float GEMUK_MIN_WEIGHT_KG = 1.0f;
 constexpr float KURUS_MIN_WEIGHT_KG = 0.5f;
+constexpr unsigned long BELT_TIGHTEN_STEP_DELAY_US = 2000;
 
 // --- Pulse detection ---
 // long = signed 32-bit integer (large IR sensor readings)

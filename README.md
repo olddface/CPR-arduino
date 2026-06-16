@@ -55,9 +55,9 @@ test-max30102/
 
 ### HX711 load cell (belt tension gate)
 
-After **Gemuk** or **Kurus** is selected, the firmware enters a **belt tighten** screen. Tighten the CPR belt until the load cell reads at least the minimum weight for that mode. CPR compressions start only once the threshold is met.
+After **Gemuk** or **Kurus** is selected, the firmware enters a **belt tighten** phase. The **stepper motor runs automatically** to tighten the belt while the load cell is read. When weight reaches the minimum for that mode, the motor **stops** and CPR compressions begin.
 
-The stepper **only runs while belt tension stays above the threshold**. If tension drops mid-stroke (belt slips, patient shifts, etc.), the motor stops immediately — same as pressing **Stop**.
+During CPR, the stepper only runs while belt tension stays above the threshold. If tension drops mid-stroke, the motor stops immediately.
 
 | Mode | Default minimum weight | Constant |
 |------|------------------------|----------|
@@ -106,11 +106,12 @@ Pulse check (2.5 s)
     ├─ Pulse detected → "Pasien Masih Hidup" → Idle
     └─ No pulse       → "Pasien Henti Jantung" → pick Gemuk or Kurus
                               ↓
-                    Belt tighten (load cell gate)
+                    Belt tighten (motor runs → stops at threshold)
+                    ├─ Motor steps until load cell ≥ minimum
                     ├─ LCD: "Kencang sabuk" + live weight vs minimum
-                    ├─ Gemuk: need ≥ ~1.0 kg on cell
-                    └─ Kurus: need ≥ ~0.5 kg on cell
-                              ↓ [threshold met]
+                    ├─ Gemuk: stop at ~1.0 kg
+                    └─ Kurus: stop at ~0.5 kg
+                              ↓ [threshold met, motor stops]
                     Compression loop (until Stop or tension lost)
                     ├─ Gemuk: 30 kompresi
                     └─ Kurus: 15 kompresi
@@ -152,8 +153,9 @@ Edit constants in [`include/config.h`](include/config.h):
 | `HX711_DT_PIN` | `5` | HX711 data pin |
 | `HX711_SCK_PIN` | `6` | HX711 clock pin |
 | `LOAD_CELL_SCALE` | `-7050.0` | Calibration factor — tune with known mass |
-| `GEMUK_MIN_WEIGHT_KG` | `1.0` | Minimum belt tension (kg) before Gemuk CPR runs |
-| `KURUS_MIN_WEIGHT_KG` | `0.5` | Minimum belt tension (kg) before Kurus CPR runs |
+| `GEMUK_MIN_WEIGHT_KG` | `1.0` | Minimum belt tension (kg) — motor stops tightening at this value |
+| `KURUS_MIN_WEIGHT_KG` | `0.5` | Minimum belt tension (kg) — motor stops tightening at this value |
+| `BELT_TIGHTEN_STEP_DELAY_US` | `2000` | Step interval while auto-tightening belt (µs) |
 
 ## Build and upload
 
@@ -183,9 +185,10 @@ State values: `0` Idle, `1` PulseCheck, `2` AwaitingMode, `3` BeltTighten, `4` R
 1. **Idle** — LCD shows title and BPM when finger is on MAX30102.
 2. **Alive path** — Finger on sensor → press **Start** → `Pasien Masih Hidup`, motor does not run.
 3. **Arrest path** — No finger → **Start** → `Pasien Henti Jantung` → flip **Gemuk** or **Kurus** toggle ON.
-4. **Compression** — Motor runs tighten/release strokes; LCD counts `Komp: n/total`.
-5. **Ventilation cue** — After each batch, buzzer beeps twice.
-6. **Stop** — Press **Stop** anytime → motor halts, short buzzer chirp, returns to idle after 2 s.
+4. **Belt tighten** — Motor runs to tighten the belt; LCD shows live weight. Motor stops when threshold is reached (Gemuk ~1 kg, Kurus ~0.5 kg), then CPR starts.
+5. **Compression** — Motor runs tighten/release strokes only while belt tension stays above minimum; LCD counts `Komp: n/total`.
+6. **Ventilation cue** — After each batch, buzzer beeps twice.
+7. **Stop / tension lost** — Press **Stop** anytime, or loosen belt below threshold → motor halts, short buzzer chirp, returns to idle after 2 s.
 
 ## Dependencies
 
@@ -193,10 +196,13 @@ From [`platformio.ini`](platformio.ini):
 
 - `sparkfun/SparkFun MAX3010x Pulse and Proximity Sensor Library`
 - `marcoschwartz/LiquidCrystal_I2C`
+- `bogde/HX711`
 
 ## Notes
 
 - CPR is **button-driven**, not auto-triggered by low BPM.
+- Stepper **auto-tightens** the belt after mode select; stops when load cell hits threshold.
+- During CPR, stepper compressions require **continuous belt tension** on the load cell.
 - Buzzer cues ventilation only; there is no bag-valve hardware.
 - Belt depth (5–6 cm target) is set mechanically via `STEPS_PER_STROKE` and mechanical linkage, not in software.
 - If motor does not move, verify TB6600 opto wiring (GND common vs 5V common) and set `TB6600_COMMON_5V` accordingly.

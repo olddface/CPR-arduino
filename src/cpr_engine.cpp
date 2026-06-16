@@ -128,22 +128,22 @@ void cprEngineUpdate() {
       break;
 
     case SystemState::BeltTighten:
-      if (now - lastUiUpdateMs >= UI_UPDATE_MS) {
-        lastUiUpdateMs = now;
-        showBeltTightenDisplay(beltTightenGemuk, loadCellWeightKg());
-      }
-
       if (btn == ButtonEvent::Stop) {
         handleStop();
         systemState = SystemState::Idle;
         break;
       }
 
-      if (loadCellMeetsThreshold()) {
+      showBeltTightenDisplay(beltTightenGemuk, loadCellWeightKg());
+
+      if (stepMotorUntilWeight(true, BELT_TIGHTEN_STEP_DELAY_US, beltTightenGemuk)) {
         systemState = beltTightenGemuk ? SystemState::RunningGemuk : SystemState::RunningKurus;
         Serial.print(F("Belt tension OK — "));
         Serial.print(loadCellWeightKg(), 2);
         Serial.println(F(" kg — starting CPR"));
+      } else {
+        handleStop();
+        systemState = SystemState::Idle;
       }
       break;
 
