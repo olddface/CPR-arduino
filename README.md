@@ -1,6 +1,6 @@
 # Automatic CPR Portable
 
-Firmware for **Automatic CPR Portable Dilengkapi dengan Sensor Denyut Jantung** — Arduino Uno prototype with MAX30102 heart-rate monitoring, I2C LCD, TB6600 stepper belt compression, push buttons, and active buzzer.
+Firmware for **Automatic CPR Portable Dilengkapi dengan Sensor Denyut Jantung** — Arduino Uno prototype with MAX30102 heart-rate monitoring, I2C LCD, HX711 load cell belt-tension gate, TB6600 stepper belt compression, push buttons, and active buzzer.
 
 ## Project structure
 
@@ -12,6 +12,7 @@ test-max30102/
 │   ├── cpr_engine.cpp      # State machine (idle → pulse check → CPR)
 │   ├── pulse_sensor.cpp    # MAX30102 init and BPM averaging
 │   ├── stepper_motor.cpp   # TB6600 timed step pulses
+│   ├── load_cell.cpp       # HX711 belt-tension read / threshold gate
 │   ├── display.cpp         # I2C LCD messages
 │   ├── buttons.cpp         # Debounced button polling
 │   └── buzzer.cpp          # Ventilation / stop beeps
@@ -20,6 +21,7 @@ test-max30102/
     ├── cpr_engine.h
     ├── pulse_sensor.h
     ├── stepper_motor.h
+    ├── load_cell.h
     ├── display.h
     ├── buttons.h
     └── buzzer.h
@@ -29,7 +31,8 @@ test-max30102/
 |--------|----------------|
 | `cpr_engine` | System state machine and compression batch orchestration |
 | `pulse_sensor` | MAX30102 setup, beat detection, rolling BPM average |
-| `stepper_motor` | TB6600 enable/step/dir control; ENA on only during compression strokes |
+| `stepper_motor` | TB6600 enable/step/dir control; ENA on only during compression strokes; stops if belt tension lost |
+| `load_cell` | HX711 init, tare, weight read, and minimum-tension gate for Gemuk/Kurus |
 | `display` | LCD screens for each state |
 | `buttons` | Momentary Start/Stop + toggle Gemuk/Kurus reads |
 | `buzzer` | Active buzzer on/off and multi-beep patterns |
@@ -48,6 +51,26 @@ test-max30102/
 | TB6600 common | PUL−, DIR−, and ENA− to Arduino GND; driver GND tied to Arduino GND |
 | Stepper NEMA 23 | A+/A−, B+/B− to driver |
 | Motor PSU | 9–42 V DC to driver VCC/GND (**not** Arduino 5V) |
+| HX711 + 50 kg load cell | VCC → 5V, GND → GND, DT → D5 (`HX711_DT_PIN`), SCK → D6 (`HX711_SCK_PIN`); E+/E− and A+/A− to load cell per module silkscreen |
+
+### HX711 load cell (belt tension gate)
+
+After **Gemuk** or **Kurus** is selected, the firmware enters a **belt tighten** screen. Tighten the CPR belt until the load cell reads at least the minimum weight for that mode. CPR compressions start only once the threshold is met.
+
+The stepper **only runs while belt tension stays above the threshold**. If tension drops mid-stroke (belt slips, patient shifts, etc.), the motor stops immediately — same as pressing **Stop**.
+
+| Mode | Default minimum weight | Constant |
+|------|------------------------|----------|
+| Gemuk | ~1.0 kg | `GEMUK_MIN_WEIGHT_KG` |
+| Kurus | ~0.5 kg | `KURUS_MIN_WEIGHT_KG` |
+
+**Calibration:** `LOAD_CELL_SCALE` in `config.h` is a placeholder. With a known mass on the cell (e.g. 1 kg), read the raw value from serial, then set:
+
+```
+LOAD_CELL_SCALE = (raw_reading - offset) / known_kg
+```
+
+Tare runs automatically when entering belt tighten (after mode select). Re-tune `LOAD_CELL_SCALE` until serial `W=` matches your known mass.
 
 ### TB6600 enable (ENA)
 
@@ -83,7 +106,12 @@ Pulse check (2.5 s)
     ├─ Pulse detected → "Pasien Masih Hidup" → Idle
     └─ No pulse       → "Pasien Henti Jantung" → pick Gemuk or Kurus
                               ↓
-                    Compression loop (until Stop)
+                    Belt tighten (load cell gate)
+                    ├─ LCD: "Kencang sabuk" + live weight vs minimum
+                    ├─ Gemuk: need ≥ ~1.0 kg on cell
+                    └─ Kurus: need ≥ ~0.5 kg on cell
+                              ↓ [threshold met]
+                    Compression loop (until Stop or tension lost)
                     ├─ Gemuk: 30 kompresi
                     └─ Kurus: 15 kompresi
                               ↓
@@ -100,6 +128,7 @@ Pulse check (2.5 s)
 | Checking | `Cek denyut...` | `BPM: xx` |
 | Alive | `Pasien Masih Hid` | `BPM: xx` |
 | Arrest | `Pasien Henti Jnt` | `Gemuk / Kurus` |
+| Belt tighten | `Kencang sabuk` | `Berat x.x/x.xkg` (live / minimum) |
 | Gemuk CPR | `Mode Gemuk` | `Komp: n/30` |
 | Kurus CPR | `Mode Kurus` | `Komp: n/15` |
 | Stopped | `CPR dihentikan` | (blank) |
@@ -120,6 +149,11 @@ Edit constants in [`include/config.h`](include/config.h):
 | `ENABLE_PIN` | `10` | TB6600 ENA+ (Arduino GPIO) |
 | `TB6600_COMMON_5V` | `false` | Set `true` if PUL+/DIR+ go to 5V and PUL−/DIR− go to GPIO |
 | `TB6600_ENABLE_5V` | `false` | ENA opto polarity — toggle if idle shaft stays stiff (driver still on) |
+| `HX711_DT_PIN` | `5` | HX711 data pin |
+| `HX711_SCK_PIN` | `6` | HX711 clock pin |
+| `LOAD_CELL_SCALE` | `-7050.0` | Calibration factor — tune with known mass |
+| `GEMUK_MIN_WEIGHT_KG` | `1.0` | Minimum belt tension (kg) before Gemuk CPR runs |
+| `KURUS_MIN_WEIGHT_KG` | `0.5` | Minimum belt tension (kg) before Kurus CPR runs |
 
 ## Build and upload
 
@@ -136,13 +170,13 @@ Or from VS Code / Cursor: **PlatformIO → Build**, then **Upload**.
 
 ## Serial monitor
 
-At 115200 baud the firmware prints state, IR value, and BPM each UI tick:
+At 115200 baud the firmware prints state, IR value, BPM, and load-cell weight each UI tick:
 
 ```
-state=0 IR=125000 BPM=72
+state=0 IR=125000 BPM=72 W=0.00
 ```
 
-State values: `0` Idle, `1` PulseCheck, `2` AwaitingMode, `3` RunningGemuk, `4` RunningKurus.
+State values: `0` Idle, `1` PulseCheck, `2` AwaitingMode, `3` BeltTighten, `4` RunningGemuk, `5` RunningKurus.
 
 ## Test procedure
 

@@ -7,6 +7,7 @@
 #include "config.h"
 #include "display.h"
 #include "pulse_sensor.h"
+#include "load_cell.h"
 #include "stepper_motor.h"
 
 // Global variables — live for whole program; shared across functions in this file
@@ -14,6 +15,7 @@ SystemState systemState = SystemState::Idle;
 uint32_t pulseCheckStartMs = 0;
 uint32_t stoppedDisplayUntilMs = 0;
 uint32_t lastUiUpdateMs = 0;
+bool beltTightenGemuk = false;
 
 void handleStop() {
   buzzerBeep(1, 400, 0);  // one short beep: 400 ms on, 0 ms off between
@@ -108,14 +110,40 @@ void cprEngineUpdate() {
 
     case SystemState::AwaitingMode:
       if (isGemukSelected()) {
-        systemState = SystemState::RunningGemuk;
-        Serial.println(F("Gemuk CPR mode"));
+        beltTightenGemuk = true;
+        loadCellSetGemukMode(true);
+        loadCellTare();
+        systemState = SystemState::BeltTighten;
+        Serial.println(F("Gemuk — tighten belt (~1 kg)"));
       } else if (isKurusSelected()) {
-        systemState = SystemState::RunningKurus;
-        Serial.println(F("Kurus CPR mode"));
+        beltTightenGemuk = false;
+        loadCellSetGemukMode(false);
+        loadCellTare();
+        systemState = SystemState::BeltTighten;
+        Serial.println(F("Kurus — tighten belt"));
       } else if (btn == ButtonEvent::Stop) {
         handleStop();
         systemState = SystemState::Idle;
+      }
+      break;
+
+    case SystemState::BeltTighten:
+      if (now - lastUiUpdateMs >= UI_UPDATE_MS) {
+        lastUiUpdateMs = now;
+        showBeltTightenDisplay(beltTightenGemuk, loadCellWeightKg());
+      }
+
+      if (btn == ButtonEvent::Stop) {
+        handleStop();
+        systemState = SystemState::Idle;
+        break;
+      }
+
+      if (loadCellMeetsThreshold()) {
+        systemState = beltTightenGemuk ? SystemState::RunningGemuk : SystemState::RunningKurus;
+        Serial.print(F("Belt tension OK — "));
+        Serial.print(loadCellWeightKg(), 2);
+        Serial.println(F(" kg — starting CPR"));
       }
       break;
 
@@ -161,6 +189,8 @@ void cprEngineUpdate() {
     Serial.print(pulseSensorIrValue());
     Serial.print(F(" BPM="));
     Serial.print(pulseSensorBeatAvg());
+    Serial.print(F(" W="));
+    Serial.print(loadCellWeightKg(), 2);
     Serial.println();  // newline after debug row
   }
 }

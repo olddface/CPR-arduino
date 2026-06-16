@@ -41,6 +41,14 @@ constexpr uint16_t COMPRESSIONS_PER_MIN = 110;
 constexpr uint16_t STEPS_PER_REV = 200;
 constexpr uint16_t STEPS_PER_STROKE = 200;
 
+// --- HX711 load cell (50 kg) — belt tension gate ---
+constexpr uint8_t HX711_DT_PIN = 5;
+constexpr uint8_t HX711_SCK_PIN = 6;
+// Calibrate: place known mass on cell, set LOAD_CELL_SCALE = (raw - offset) / kg
+constexpr float LOAD_CELL_SCALE = -7050.0f;
+constexpr float GEMUK_MIN_WEIGHT_KG = 1.0f;
+constexpr float KURUS_MIN_WEIGHT_KG = 0.5f;
+
 // --- Pulse detection ---
 // long = signed 32-bit integer (large IR sensor readings)
 constexpr long FINGER_IR_MIN = 70000;
@@ -58,6 +66,7 @@ enum class SystemState : uint8_t {
   Idle,
   PulseCheck,
   AwaitingMode,
+  BeltTighten,
   RunningGemuk,
   RunningKurus,
 };

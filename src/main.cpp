@@ -13,6 +13,7 @@
 #include "buzzer.h"
 #include "cpr_engine.h"
 #include "display.h"
+#include "load_cell.h"
 #include "pulse_sensor.h"
 #include "stepper_motor.h"
 
@@ -26,6 +27,7 @@ void setup() {
   stepperInit();
   buzzerInit();
   buttonsInit();
+  loadCellInit();
   displayInit();
 
   // F("text") stores string in flash memory (saves RAM on Arduino)

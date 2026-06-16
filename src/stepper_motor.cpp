@@ -1,4 +1,4 @@
-#include "stepper_motor.h"
+#include "load_cell.h"
 
 #include "buttons.h"
 #include "config.h"
@@ -9,6 +9,7 @@ namespace {
 // Ternary: condition ? valueIfTrue : valueIfFalse
 constexpr uint8_t kEnableActiveLevel = TB6600_ENABLE_5V ? LOW : HIGH;
 constexpr uint8_t kEnableInactiveLevel = TB6600_ENABLE_5V ? HIGH : LOW;
+constexpr uint16_t kWeightCheckIntervalSteps = 25;
 
 void stepperSetEnabled(bool enabled) {
   // digitalWrite(pin, HIGH or LOW) sets output voltage on that pin
@@ -55,6 +56,11 @@ bool stepMotorTimed(uint16_t steps, bool directionUp, unsigned long delayUs) {
     if (isStopPressed()) {
       stepperSetEnabled(false);
       return false;  // exit function immediately
+    }
+
+    if ((i % kWeightCheckIntervalSteps) == 0 && !loadCellAllowsMotor()) {
+      stepperSetEnabled(false);
+      return false;
     }
 
     if (TB6600_COMMON_5V) {

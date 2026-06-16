@@ -11,3 +11,4 @@ void showCprDisplay(const __FlashStringHelper *modeLabel, uint8_t current, uint8
 void showStoppedDisplay();
 void showPulseCheckDisplay();
 void showSensorNotFoundDisplay();
+void showBeltTightenDisplay(bool gemuk, float weightKg);

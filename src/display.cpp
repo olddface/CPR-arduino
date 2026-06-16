@@ -32,7 +32,7 @@ void displayInit() {
 
 void showIdleDisplay() {
   lcd.setCursor(0, 0);
-  lcd.print(F("ALAT CPR OTMTS"));
+  lcd.print(F("ALAT CPR OTMTS        "));
   printBpmLine2();
 }
 
@@ -79,4 +79,15 @@ void showSensorNotFoundDisplay() {
   lcd.print(F("Sensor not found"));
   lcd.setCursor(0, 1);
   lcd.print(F("                "));
+}
+
+void showBeltTightenDisplay(bool gemuk, float weightKg) {
+  lcd.setCursor(0, 0);
+  lcd.print(F("Kencang sabuk   "));
+  lcd.setCursor(0, 1);
+  lcd.print(F("Berat "));
+  lcd.print(weightKg, 1);
+  lcd.print(F("/"));
+  lcd.print(gemuk ? GEMUK_MIN_WEIGHT_KG : KURUS_MIN_WEIGHT_KG, 1);
+  lcd.print(F("kg  "));
 }
