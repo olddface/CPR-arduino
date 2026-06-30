@@ -22,6 +22,8 @@ uint8_t cprCycleCount = 1;
 
 enum class BatchResult : uint8_t { Complete, StoppedByUser, StoppedByPulse };
 
+void handleStop();
+
 void enterPulsePause(SystemState fromState, uint32_t now) {
   pausedFromState = fromState;
   pulsePauseStartMs = now;
