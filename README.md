@@ -47,7 +47,7 @@ test-max30102/
 | Active buzzer | D13 → buzzer+, GND → buzzer− |
 | TB6600 PUL | PUL+ → D9 (`STEP_PIN`), PUL− → GND (with DIR−) |
 | TB6600 DIR | DIR+ → D8 (`DIR_PIN`), DIR− → GND (with PUL−) |
-| TB6600 ENA | ENA+ → D10 (`ENABLE_PIN`), ENA− → GND |
+| TB6600 ENA | ENA- → D10 (`ENABLE_PIN`), ENA+ → 5v |
 | TB6600 common | PUL−, DIR−, and ENA− to Arduino GND; driver GND tied to Arduino GND |
 | Stepper NEMA 23 | A+/A−, B+/B− to driver |
 | Motor PSU | 9–42 V DC to driver VCC/GND (**not** Arduino 5V) |
