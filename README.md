@@ -2,6 +2,8 @@
 
 Firmware for **Automatic CPR Portable Dilengkapi dengan Sensor Denyut Jantung** — Arduino Uno prototype with MAX30102 heart-rate monitoring, I2C LCD, HX711 load cell belt-tension gate, TB6600 stepper belt compression, push buttons, and active buzzer.
 
+demo video: [youtube](https://youtube.com/shorts/GFw8relDZUo?si=jx3cH9gxT8BCLEGH)
+
 ## Project structure
 
 ```
